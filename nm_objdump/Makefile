@@ -1,20 +1,21 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -Werror -pedantic
+CFLAGS = -Wall -Werror -Wextra -pedantic -std=gnu89
 
-SRC = hnm.c elf_parser.c
+SRC = $(wildcard *.c)
 OBJ = $(SRC:.c=.o)
-
-all: hnm
-
-hnm: $(OBJ)
-	$(CC) $(CFLAGS) $(OBJ) -o hnm
-
-clean:
-	rm -f *.o
-
-fclean: clean
-	rm -f hnm
-
-re: fclean all
+NAME = hnm
 
 .PHONY: all clean fclean re
+
+all: $(NAME)
+
+$(NAME): $(OBJ)
+	$(CC) $(CFLAGS) $(OBJ) -o $(NAME)
+
+clean:
+	$(RM) $(OBJ)
+
+fclean: clean
+	$(RM) $(NAME)
+
+re: fclean all
