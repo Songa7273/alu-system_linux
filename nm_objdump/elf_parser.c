@@ -19,11 +19,10 @@ static void print_symbol_64(Elf64_Sym *sym, char *strtab)
         type = 'T';
 
     if (type == 'U')
-        printf("%17s %c %s\n", "", type,
-               strtab + sym->st_name);
+        printf("%17s %c %s\n", "", type, strtab + sym->st_name);
     else
         printf("%016lx %c %s\n",
-               sym->st_value,
+               (unsigned long)sym->st_value,
                type,
                strtab + sym->st_name);
 }
@@ -38,6 +37,7 @@ int parse_elf(const char *filename)
     char *shstrtab;
     char *strtab;
     int i;
+    int j;
     int symcount;
 
     fd = open(filename, O_RDONLY);
@@ -61,14 +61,17 @@ int parse_elf(const char *filename)
     }
 
     shdrs = malloc(ehdr.e_shentsize * ehdr.e_shnum);
+    if (!shdrs)
+        return (1);
 
     lseek(fd, ehdr.e_shoff, SEEK_SET);
-    read(fd, shdrs,
-         ehdr.e_shentsize * ehdr.e_shnum);
+    read(fd, shdrs, ehdr.e_shentsize * ehdr.e_shnum);
 
     shdr = shdrs[ehdr.e_shstrndx];
 
     shstrtab = malloc(shdr.sh_size);
+    if (!shstrtab)
+        return (1);
 
     lseek(fd, shdr.sh_offset, SEEK_SET);
     read(fd, shstrtab, shdr.sh_size);
@@ -78,28 +81,25 @@ int parse_elf(const char *filename)
         if (shdrs[i].sh_type == SHT_SYMTAB)
         {
             syms = malloc(shdrs[i].sh_size);
+            if (!syms)
+                return (1);
 
             lseek(fd, shdrs[i].sh_offset, SEEK_SET);
             read(fd, syms, shdrs[i].sh_size);
 
             strtab = malloc(shdrs[shdrs[i].sh_link].sh_size);
+            if (!strtab)
+                return (1);
 
-            lseek(fd,
-                  shdrs[shdrs[i].sh_link].sh_offset,
-                  SEEK_SET);
+            lseek(fd, shdrs[shdrs[i].sh_link].sh_offset, SEEK_SET);
+            read(fd, strtab, shdrs[shdrs[i].sh_link].sh_size);
 
-            read(fd,
-                 strtab,
-                 shdrs[shdrs[i].sh_link].sh_size);
+            symcount = shdrs[i].sh_size / sizeof(Elf64_Sym);
 
-            symcount = shdrs[i].sh_size /
-                       sizeof(Elf64_Sym);
-
-            for (int j = 0; j < symcount; j++)
+            for (j = 0; j < symcount; j++)
             {
                 if (syms[j].st_name)
-                    print_symbol_64(&syms[j],
-                                    strtab);
+                    print_symbol_64(&syms[j], strtab);
             }
 
             free(strtab);
