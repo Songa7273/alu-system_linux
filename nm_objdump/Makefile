@@ -5,14 +5,11 @@ SRC = hnm.c main.c
 OBJ = $(SRC:.c=.o)
 NAME = hnm
 
-.PHONY: all clean fclean re hnm
+.PHONY: all clean fclean re
 
 all: $(NAME)
 
 $(NAME): $(OBJ)
-	$(CC) $(CFLAGS) $(OBJ) -o $(NAME)
-
-hnm: $(OBJ)
 	$(CC) $(CFLAGS) $(OBJ) -o $(NAME)
 
 clean:

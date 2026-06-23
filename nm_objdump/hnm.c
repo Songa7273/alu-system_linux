@@ -5,32 +5,37 @@
  * @sym: Pointer to Elf64_Sym
  * @shdr: Pointer to section headers
  * @shnum: Number of sections
+ * @be: Big-endian flag
  * Return: Character flag representing the type
  */
-char get_type_64(Elf64_Sym *sym, Elf64_Shdr *shdr, int shnum)
+char get_type_64(Elf64_Sym *sym, Elf64_Shdr *shdr, int shnum, int be)
 {
 	char c = '?';
+	uint16_t shndx = SWAP16(sym->st_shndx, be);
+	uint32_t type, flags;
 
 	if (ELF64_ST_BIND(sym->st_info) == STB_WEAK)
 	{
-		c = (sym->st_shndx == SHN_UNDEF) ? 'w' : 'W';
+		c = (shndx == SHN_UNDEF) ? 'w' : 'W';
 		if (ELF64_ST_TYPE(sym->st_info) == STT_OBJECT)
-			c = (sym->st_shndx == SHN_UNDEF) ? 'v' : 'V';
+			c = (shndx == SHN_UNDEF) ? 'v' : 'V';
 		return (c);
 	}
-	if (sym->st_shndx == SHN_UNDEF)
+	if (shndx == SHN_UNDEF)
 		return ('U');
-	if (sym->st_shndx == SHN_ABS)
+	if (shndx == SHN_ABS)
 		c = 'A';
-	else if (sym->st_shndx == SHN_COMMON)
+	else if (shndx == SHN_COMMON)
 		c = 'C';
-	else if (sym->st_shndx < shnum)
+	else if (shndx < shnum)
 	{
-		uint32_t type = shdr[sym->st_shndx].sh_type;
-		uint64_t flags = shdr[sym->st_shndx].sh_flags;
+		type = SWAP32(shdr[shndx].sh_type, be);
+		flags = SWAP64(shdr[shndx].sh_flags, be);
 
 		if (type == SHT_NOBITS)
 			c = 'B';
+		else if (type == SHT_INIT_ARRAY || type == SHT_FINI_ARRAY)
+			c = 'T';
 		else if (flags & SHF_WRITE)
 			c = 'D';
 		else if (flags & SHF_EXECINSTR)
@@ -39,7 +44,7 @@ char get_type_64(Elf64_Sym *sym, Elf64_Shdr *shdr, int shnum)
 			c = 'R';
 	}
 	if (ELF64_ST_BIND(sym->st_info) == STB_LOCAL && c != '?')
-		c += 32; /* Convert to lowercase for local symbols */
+		c += 32;
 	return (c);
 }
 
@@ -52,15 +57,16 @@ char get_type_64(Elf64_Sym *sym, Elf64_Shdr *shdr, int shnum)
  */
 int process_64(const char *filename, char *map, Elf64_Ehdr *ehdr)
 {
-	Elf64_Shdr *shdr = (Elf64_Shdr *)(map + ehdr->e_shoff);
+	int be = (map[EI_DATA] == ELFDATA2MSB);
+	Elf64_Shdr *shdr = (Elf64_Shdr *)(map + SWAP64(ehdr->e_shoff, be));
 	Elf64_Shdr *symtab_sh = NULL;
 	Elf64_Sym *syms;
 	char *strtab;
-	int i, shnum = ehdr->e_shnum, num_syms;
+	int i, shnum = SWAP16(ehdr->e_shnum, be), num_syms;
 
 	for (i = 0; i < shnum; i++)
 	{
-		if (shdr[i].sh_type == SHT_SYMTAB)
+		if (SWAP32(shdr[i].sh_type, be) == SHT_SYMTAB)
 		{
 			symtab_sh = &shdr[i];
 			break;
@@ -71,22 +77,23 @@ int process_64(const char *filename, char *map, Elf64_Ehdr *ehdr)
 		fprintf(stderr, "./hnm: %s: no symbols\n", filename);
 		return (1);
 	}
-	syms = (Elf64_Sym *)(map + symtab_sh->sh_offset);
-	num_syms = symtab_sh->sh_size / symtab_sh->sh_entsize;
-	strtab = map + shdr[symtab_sh->sh_link].sh_offset;
+	syms = (Elf64_Sym *)(map + SWAP64(symtab_sh->sh_offset, be));
+	num_syms = SWAP64(symtab_sh->sh_size, be) / SWAP64(symtab_sh->sh_entsize, be);
+	strtab = map + SWAP64(shdr[SWAP32(symtab_sh->sh_link, be)].sh_offset, be);
 
 	for (i = 0; i < num_syms; i++)
 	{
 		int type = ELF64_ST_TYPE(syms[i].st_info);
+		uint32_t name = SWAP32(syms[i].st_name, be);
 		char c;
 
-		if (!syms[i].st_name || type == STT_FILE || type == STT_SECTION)
+		if (!name || type == STT_FILE || type == STT_SECTION)
 			continue;
-		c = get_type_64(&syms[i], shdr, shnum);
+		c = get_type_64(&syms[i], shdr, shnum, be);
 		if (c == 'U' || c == 'w' || c == 'v')
-			printf("                 %c %s\n", c, strtab + syms[i].st_name);
+			printf("                 %c %s\n", c, strtab + name);
 		else
-			printf("%016lx %c %s\n", syms[i].st_value, c, strtab + syms[i].st_name);
+			printf("%016lx %c %s\n", SWAP64(syms[i].st_value, be), c, strtab + name);
 	}
 	return (0);
 }
@@ -96,32 +103,37 @@ int process_64(const char *filename, char *map, Elf64_Ehdr *ehdr)
  * @sym: Pointer to Elf32_Sym
  * @shdr: Pointer to section headers
  * @shnum: Number of sections
+ * @be: Big-endian flag
  * Return: Character flag representing the type
  */
-char get_type_32(Elf32_Sym *sym, Elf32_Shdr *shdr, int shnum)
+char get_type_32(Elf32_Sym *sym, Elf32_Shdr *shdr, int shnum, int be)
 {
 	char c = '?';
+	uint16_t shndx = SWAP16(sym->st_shndx, be);
+	uint32_t type, flags;
 
 	if (ELF32_ST_BIND(sym->st_info) == STB_WEAK)
 	{
-		c = (sym->st_shndx == SHN_UNDEF) ? 'w' : 'W';
+		c = (shndx == SHN_UNDEF) ? 'w' : 'W';
 		if (ELF32_ST_TYPE(sym->st_info) == STT_OBJECT)
-			c = (sym->st_shndx == SHN_UNDEF) ? 'v' : 'V';
+			c = (shndx == SHN_UNDEF) ? 'v' : 'V';
 		return (c);
 	}
-	if (sym->st_shndx == SHN_UNDEF)
+	if (shndx == SHN_UNDEF)
 		return ('U');
-	if (sym->st_shndx == SHN_ABS)
+	if (shndx == SHN_ABS)
 		c = 'A';
-	else if (sym->st_shndx == SHN_COMMON)
+	else if (shndx == SHN_COMMON)
 		c = 'C';
-	else if (sym->st_shndx < shnum)
+	else if (shndx < shnum)
 	{
-		uint32_t type = shdr[sym->st_shndx].sh_type;
-		uint32_t flags = shdr[sym->st_shndx].sh_flags;
+		type = SWAP32(shdr[shndx].sh_type, be);
+		flags = SWAP32(shdr[shndx].sh_flags, be);
 
 		if (type == SHT_NOBITS)
 			c = 'B';
+		else if (type == SHT_INIT_ARRAY || type == SHT_FINI_ARRAY)
+			c = 'T';
 		else if (flags & SHF_WRITE)
 			c = 'D';
 		else if (flags & SHF_EXECINSTR)
@@ -143,15 +155,16 @@ char get_type_32(Elf32_Sym *sym, Elf32_Shdr *shdr, int shnum)
  */
 int process_32(const char *filename, char *map, Elf32_Ehdr *ehdr)
 {
-	Elf32_Shdr *shdr = (Elf32_Shdr *)(map + ehdr->e_shoff);
+	int be = (map[EI_DATA] == ELFDATA2MSB);
+	Elf32_Shdr *shdr = (Elf32_Shdr *)(map + SWAP32(ehdr->e_shoff, be));
 	Elf32_Shdr *symtab_sh = NULL;
 	Elf32_Sym *syms;
 	char *strtab;
-	int i, shnum = ehdr->e_shnum, num_syms;
+	int i, shnum = SWAP16(ehdr->e_shnum, be), num_syms;
 
 	for (i = 0; i < shnum; i++)
 	{
-		if (shdr[i].sh_type == SHT_SYMTAB)
+		if (SWAP32(shdr[i].sh_type, be) == SHT_SYMTAB)
 		{
 			symtab_sh = &shdr[i];
 			break;
@@ -162,22 +175,23 @@ int process_32(const char *filename, char *map, Elf32_Ehdr *ehdr)
 		fprintf(stderr, "./hnm: %s: no symbols\n", filename);
 		return (1);
 	}
-	syms = (Elf32_Sym *)(map + symtab_sh->sh_offset);
-	num_syms = symtab_sh->sh_size / symtab_sh->sh_entsize;
-	strtab = map + shdr[symtab_sh->sh_link].sh_offset;
+	syms = (Elf32_Sym *)(map + SWAP32(symtab_sh->sh_offset, be));
+	num_syms = SWAP32(symtab_sh->sh_size, be) / SWAP32(symtab_sh->sh_entsize, be);
+	strtab = map + SWAP32(shdr[SWAP32(symtab_sh->sh_link, be)].sh_offset, be);
 
 	for (i = 0; i < num_syms; i++)
 	{
 		int type = ELF32_ST_TYPE(syms[i].st_info);
+		uint32_t name = SWAP32(syms[i].st_name, be);
 		char c;
 
-		if (!syms[i].st_name || type == STT_FILE || type == STT_SECTION)
+		if (!name || type == STT_FILE || type == STT_SECTION)
 			continue;
-		c = get_type_32(&syms[i], shdr, shnum);
+		c = get_type_32(&syms[i], shdr, shnum, be);
 		if (c == 'U' || c == 'w' || c == 'v')
-			printf("         %c %s\n", c, strtab + syms[i].st_name);
+			printf("         %c %s\n", c, strtab + name);
 		else
-			printf("%08x %c %s\n", syms[i].st_value, c, strtab + syms[i].st_name);
+			printf("%08x %c %s\n", SWAP32(syms[i].st_value, be), c, strtab + name);
 	}
 	return (0);
 }
