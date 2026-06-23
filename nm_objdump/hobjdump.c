@@ -67,7 +67,7 @@ void get_elf_target(uint16_t machine, char *fmt, char *arch)
 	}
 	else
 	{
-		strcpy(fmt, "elf64-unknown");
+		strcpy(fmt, "unknown");
 		strcpy(arch, "unknown");
 	}
 }
