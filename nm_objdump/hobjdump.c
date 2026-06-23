@@ -162,15 +162,20 @@ int process_obj_64(const char *filename, char *map, Elf64_Ehdr *ehdr)
 		flags |= EXEC_P;
 	if (type_e == ET_DYN)
 		flags |= DYNAMIC;
+
 	for (i = 0; i < shnum; i++)
 	{
 		uint32_t type = SWAP32(shdr[i].sh_type, bfd_be);
 
 		if (type == SHT_SYMTAB)
 			flags |= HAS_SYMS;
-		if (type == SHT_DYNAMIC || type_e == ET_EXEC || type_e == ET_DYN)
-			flags |= D_PAGED;
+		if (type_e != ET_REL)
+		{
+			if (type == SHT_DYNAMIC || type_e == ET_EXEC || type_e == ET_DYN)
+				flags |= D_PAGED;
+		}
 	}
+
 	printf("\n%s:     file format %s\n", filename, fmt);
 	printf("architecture: %s, flags 0x%08x:\n", arch, flags);
 	print_flags_string(flags);
