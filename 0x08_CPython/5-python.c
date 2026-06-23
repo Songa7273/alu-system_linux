@@ -10,11 +10,9 @@ void print_python_int(PyObject *p)
     digit *digits;
     int negative = 0;
 
-    printf("[.] integer object info\n");
-
     if (!PyLong_Check(p))
     {
-        printf("  [ERROR] Invalid Int Object\n");
+        printf("Invalid Int Object\n");
         return;
     }
 
@@ -32,7 +30,7 @@ void print_python_int(PyObject *p)
     {
         if (value > (limit >> PyLong_SHIFT))
         {
-            printf("  C unsigned long int overflow\n");
+            printf("C unsigned long int overflow\n");
             return;
         }
 
@@ -43,7 +41,7 @@ void print_python_int(PyObject *p)
     }
 
     if (negative)
-        printf("  value: -%lu\n", value);
+        printf("-%lu\n", value);
     else
-        printf("  value: %lu\n", value);
+        printf("%lu\n", value);
 }
