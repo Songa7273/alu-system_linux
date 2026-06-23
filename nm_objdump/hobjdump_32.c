@@ -49,12 +49,13 @@ int process_obj_32(const char *filename, char *map, Elf32_Ehdr *ehdr)
 	char fmt[64], arch[64];
 
 	get_elf_target(mach, fmt, arch);
+
 	if (type_e == ET_REL)
 		flags |= HAS_RELOC;
-	if (type_e == ET_EXEC)
-		flags |= EXEC_P;
-	if (type_e == ET_DYN)
-		flags |= DYNAMIC;
+	else if (type_e == ET_EXEC)
+		flags |= (EXEC_P | D_PAGED);
+	else if (type_e == ET_DYN)
+		flags |= (DYNAMIC | D_PAGED);
 
 	for (i = 0; i < shnum; i++)
 	{
@@ -62,11 +63,6 @@ int process_obj_32(const char *filename, char *map, Elf32_Ehdr *ehdr)
 
 		if (type == SHT_SYMTAB)
 			flags |= HAS_SYMS;
-		if (type_e != ET_REL)
-		{
-			if (type == SHT_DYNAMIC || type_e == ET_EXEC || type_e == ET_DYN)
-				flags |= D_PAGED;
-		}
 	}
 
 	printf("\n%s:     file format %s\n", filename, fmt);
