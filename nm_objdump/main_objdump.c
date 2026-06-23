@@ -1,4 +1,10 @@
 #include "hobjdump.h"
+#include <fcntl.h>      /* For open, O_RDONLY */
+#include <unistd.h>     /* For close */
+#include <sys/types.h>  /* For structural types */
+#include <sys/stat.h>   /* For struct stat, fstat */
+#include <sys/mman.h>   /* For mmap, munmap, PROT_READ, MAP_PRIVATE */
+#include <elf.h>        /* For Elf32_Ehdr, Elf64_Ehdr, etc. */
 
 /**
  * parse_objfile - Sets up system mappings to isolate target boundaries
@@ -22,14 +28,15 @@ int parse_objfile(const char *filename)
 		close(fd);
 		return (1);
 	}
-	map = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+	map = mmap(NULL, st.st_size, PROT_READ,
+		   MAP_PRIVATE, fd, 0);
 	if (map == MAP_FAILED)
 	{
 		close(fd);
 		return (1);
 	}
 	if (map[EI_MAG0] != ELFMAG0 || map[EI_MAG1] != ELFMAG1 ||
-		map[EI_MAG2] != ELFMAG2 || map[EI_MAG3] != ELFMAG3)
+	    map[EI_MAG2] != ELFMAG2 || map[EI_MAG3] != ELFMAG3)
 	{
 		munmap(map, st.st_size);
 		close(fd);

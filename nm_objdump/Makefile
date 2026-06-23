@@ -1,27 +1,37 @@
 CC = gcc
 CFLAGS = -Wall -Werror -Wextra -pedantic -std=gnu99
 
-# Shared tracking components
+# Binaries
+NM = hnm
+OBJDUMP = hobjdump
+
+# Source files
 NM_SRC = hnm.c main.c
+OBJ_SRC = hobjdump.c hobjdump_32.c main_objdump.c
+
+# Object files
 NM_OBJ = $(NM_SRC:.c=.o)
+OBJ_OBJ = $(OBJ_SRC:.c=.o)
 
-OBJDUMP_SRC = hobjdump.c main_objdump.c
-OBJDUMP_OBJ = $(OBJDUMP_SRC:.c=.o)
+.PHONY: all clean oclean fclean re
 
-.PHONY: all clean fclean re hnm hobjdump
+all: $(NM) $(OBJDUMP)
 
-all: hnm hobjdump
+$(NM): $(NM_OBJ)
+	$(CC) $(CFLAGS) $(NM_OBJ) -o $(NM)
 
-hnm: $(NM_OBJ)
-	$(CC) $(CFLAGS) $(NM_OBJ) -o hnm
+$(OBJDUMP): $(OBJ_OBJ)
+	$(CC) $(CFLAGS) $(OBJ_OBJ) -o $(OBJDUMP)
 
-hobjdump: $(OBJDUMP_OBJ)
-	$(CC) $(CFLAGS) $(OBJDUMP_OBJ) -o hobjdump
+%.o: %.c hobjdump.h
+	$(CC) $(CFLAGS) -c $< -o $@
 
-clean:
-	rm -f $(NM_OBJ) $(OBJDUMP_OBJ)
+clean: oclean fclean
 
-fclean: clean
-	rm -f hnm hobjdump
+oclean:
+	rm -f $(NM_OBJ) $(OBJ_OBJ)
 
-re: fclean all
+fclean:
+	rm -f $(NM) $(OBJDUMP)
+
+re: oclean fclean all
