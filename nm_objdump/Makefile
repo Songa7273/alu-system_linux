@@ -1,21 +1,24 @@
 CC = gcc
-CFLAGS = -Wall -Werror -Wextra -pedantic -std=gnu89
+CFLAGS = -Wall -Werror -Wextra -pedantic -std=gnu99
 
-SRC = $(wildcard *.c)
+SRC = hnm.c main.c
 OBJ = $(SRC:.c=.o)
 NAME = hnm
 
-.PHONY: all clean fclean re
+.PHONY: all clean fclean re hnm
 
 all: $(NAME)
 
 $(NAME): $(OBJ)
 	$(CC) $(CFLAGS) $(OBJ) -o $(NAME)
 
+hnm: $(OBJ)
+	$(CC) $(CFLAGS) $(OBJ) -o $(NAME)
+
 clean:
-	$(RM) $(OBJ)
+	rm -f $(OBJ)
 
 fclean: clean
-	$(RM) $(NAME)
+	rm -f $(NAME)
 
 re: fclean all
