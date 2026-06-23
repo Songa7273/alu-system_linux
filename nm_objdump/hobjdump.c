@@ -42,6 +42,38 @@ void print_section_contents(const char *name, char *start,
 }
 
 /**
+ * get_elf_target - Resolves architecture and file format target strings
+ * @machine: ELF machine identifier field
+ * @is_64: 1 if 64-bit class layout, 0 if 32-bit layout
+ * @fmt: Destination buffer for file format representation
+ * @arch: Destination buffer for target architecture representation
+ */
+void get_elf_target(uint16_t machine, int is_64, char *fmt, char *arch)
+{
+	if (machine == EM_X86_64)
+	{
+		strcpy(fmt, "elf64-x86-64");
+		strcpy(arch, "i386:x86-64");
+	}
+	else if (machine == EM_386)
+	{
+		strcpy(fmt, "elf32-i386");
+		strcpy(arch, "i386");
+	}
+	else if (machine == EM_SPARC || machine == EM_SPARC32PLUS ||
+		 machine == EM_SPARCV9)
+	{
+		strcpy(fmt, is_64 ? "elf64-sparc" : "elf32-sparc");
+		strcpy(arch, "sparc");
+	}
+	else
+	{
+		strcpy(fmt, is_64 ? "elf64-unknown" : "elf32-unknown");
+		strcpy(arch, "unknown");
+	}
+}
+
+/**
  * process_obj_64 - Deep parses sections for 64-bit ELF layouts
  * @filename: Targeted operational filename
  * @map: Base memory map pointer
@@ -55,12 +87,15 @@ int process_obj_64(const char *filename, char *map, Elf64_Ehdr *ehdr)
 	Elf64_Shdr *shdr = (Elf64_Shdr *)(map + SWAP64(ehdr->e_shoff, bfd_be));
 	char *shstrtab = map + SWAP64(shdr[shstrndx].sh_offset, bfd_be);
 	uint16_t type_e = SWAP16(ehdr->e_type, bfd_be);
+	uint16_t mach = SWAP16(ehdr->e_machine, bfd_be);
 	uint32_t flags = HAS_SYMS | D_PAGED;
+	char fmt[64], arch[64];
 	uint16_t i;
 
+	get_elf_target(mach, 1, fmt, arch);
 	flags |= (type_e == ET_EXEC) ? EXEC_P : DYNAMIC;
-	printf("\n%s:     file format elf64-x86-64\n", filename);
-	printf("architecture: i386:x86-64, flags 0x%08x:\n", flags);
+	printf("\n%s:     file format %s\n", filename, fmt);
+	printf("architecture: %s, flags 0x%08x:\n", arch, flags);
 	if (type_e == ET_EXEC)
 		printf("EXEC_P, HAS_SYMS, D_PAGED\n");
 	else
@@ -99,12 +134,15 @@ int process_obj_32(const char *filename, char *map, Elf32_Ehdr *ehdr)
 	Elf32_Shdr *shdr = (Elf32_Shdr *)(map + SWAP32(ehdr->e_shoff, bfd_be));
 	char *shstrtab = map + SWAP32(shdr[shstrndx].sh_offset, bfd_be);
 	uint16_t type_e = SWAP16(ehdr->e_type, bfd_be);
+	uint16_t mach = SWAP16(ehdr->e_machine, bfd_be);
 	uint32_t flags = HAS_SYMS | D_PAGED;
+	char fmt[64], arch[64];
 	uint16_t i;
 
+	get_elf_target(mach, 0, fmt, arch);
 	flags |= (type_e == ET_EXEC) ? EXEC_P : DYNAMIC;
-	printf("\n%s:     file format elf32-i386\n", filename);
-	printf("architecture: i386, flags 0x%08x:\n", flags);
+	printf("\n%s:     file format %s\n", filename, fmt);
+	printf("architecture: %s, flags 0x%08x:\n", arch, flags);
 	if (type_e == ET_EXEC)
 		printf("EXEC_P, HAS_SYMS, D_PAGED\n");
 	else
