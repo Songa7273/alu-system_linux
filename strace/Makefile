@@ -1,20 +1,22 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -Werror -pedantic
+CFLAGS = -Wall -Werror -Wextra -pedantic
 
 SRC = strace_0.c
 OBJ = $(SRC:.c=.o)
+NAME = strace_0
 
-all: strace_0
+.PHONY: all clean fclean re strace_0
 
-strace_0: $(OBJ)
-	$(CC) $(CFLAGS) -o strace_0 $(OBJ)
+all: $(NAME)
+
+# Link the object files to create the final executable
+$(NAME): $(OBJ)
+	$(CC) $(CFLAGS) $(OBJ) -o $(NAME)
 
 clean:
-	rm -f $(OBJ)
+	$(RM) $(OBJ)
 
 fclean: clean
-	rm -f strace_0
+	$(RM) $(NAME)
 
 re: fclean all
-
-.PHONY: all clean fclean re
