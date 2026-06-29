@@ -6,17 +6,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+extern char **environ;
+
 /**
- * trace_syscalls - trace and print syscall numbers
- * @child: pid of traced process
+ * trace_syscalls - trace child syscalls
+ * @child: child pid
  *
- * Return: 0 on success
+ * Return: 0
  */
 int trace_syscalls(pid_t child)
 {
 	int status;
+	int entering;
 	struct user_regs_struct regs;
 
+	entering = 1;
 	waitpid(child, &status, 0);
 
 	while (1)
@@ -32,16 +36,19 @@ int trace_syscalls(pid_t child)
 		if (ptrace(PTRACE_GETREGS, child, NULL, &regs) == -1)
 			break;
 
-		printf("%lld\n", (long long)regs.orig_rax);
+		if (entering)
+			printf("%lld\n", (long long)regs.orig_rax);
+
+		entering = !entering;
 	}
 
 	return (0);
 }
 
 /**
- * main - executes and traces a command
- * @argc: argument count
- * @argv: argument vector
+ * main - execute and trace a command
+ * @argc: number of arguments
+ * @argv: command line arguments
  *
  * Return: 0 on success, 1 on failure
  */
@@ -56,6 +63,7 @@ int main(int argc, char *argv[])
 	}
 
 	child = fork();
+
 	if (child == -1)
 	{
 		perror("fork");
@@ -64,9 +72,14 @@ int main(int argc, char *argv[])
 
 	if (child == 0)
 	{
-		ptrace(PTRACE_TRACEME, 0, NULL, NULL);
-		execvp(argv[1], &argv[1]);
-		perror("execvp");
+		if (ptrace(PTRACE_TRACEME, 0, NULL, NULL) == -1)
+		{
+			perror("ptrace");
+			exit(EXIT_FAILURE);
+		}
+
+		execve(argv[1], &argv[1], environ);
+		perror("execve");
 		exit(EXIT_FAILURE);
 	}
 
