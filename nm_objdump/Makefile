@@ -1,37 +1,46 @@
+# Compiler to use
 CC = gcc
-CFLAGS = -Wall -Werror -Wextra -pedantic -std=gnu99
 
-# Binaries
-NM = hnm
-OBJDUMP = hobjdump
+# Compiler flags to ensure strict compliance with code standards and to enable debugging
+CFLAGS = -Wall -Werror -Wextra -pedantic -g -std=c99
 
-# Source files
-NM_SRC = hnm.c main.c
-OBJ_SRC = hobjdump.c hobjdump_32.c main_objdump.c
+# Additional flags for debugging
+DEBUGFLAGS = -g
 
-# Object files
-NM_OBJ = $(NM_SRC:.c=.o)
-OBJ_OBJ = $(OBJ_SRC:.c=.o)
+# Names of the target executables
+TARGET_0 = hnm
+TARGET_1 = hobjdump
 
-.PHONY: all clean oclean fclean re
+# Source files for the hnm program
+SOURCE_0 = hnm-64.c hnm-32.c hnm-main.c
 
-all: $(NM) $(OBJDUMP)
+# Header files for the hnm program
+HEADERS_0 = hnm.h
 
-$(NM): $(NM_OBJ)
-	$(CC) $(CFLAGS) $(NM_OBJ) -o $(NM)
+# Source files for the hobjdump program
+SOURCE_1 = hobjdump.c
 
-$(OBJDUMP): $(OBJ_OBJ)
-	$(CC) $(CFLAGS) $(OBJ_OBJ) -o $(OBJDUMP)
+# Default rule to build all programs
+all: $(TARGET_0) $(TARGET_1)
 
-%.o: %.c hobjdump.h
-	$(CC) $(CFLAGS) -c $< -o $@
+# Rule to compile with debug information
+debug: CFLAGS += $(DEBUGFLAGS)
+debug: all
 
-clean: oclean fclean
+# Rule to build the hnm program
+$(TARGET_0): $(SOURCE_0) $(HEADERS_0)
+	$(CC) $(CFLAGS) -o $(TARGET_0) $(SOURCE_0)
 
-oclean:
-	rm -f $(NM_OBJ) $(OBJ_OBJ)
+# Rule to build the hobjdump program
+$(TARGET_1): $(SOURCE_1)
+	$(CC) $(CFLAGS) -o $(TARGET_1) $(SOURCE_1)
 
-fclean:
-	rm -f $(NM) $(OBJDUMP)
+# Rule to clean up the compiled binaries and object files
+clean:
+	rm -f $(TARGET_0) $(TARGET_1)
+	rm -f *.o
+	rm -f *.out
+	rm -f *~
 
-re: oclean fclean all
+# Declaring phony targets to avoid conflicts with files of the same name
+.PHONY: all clean debug
