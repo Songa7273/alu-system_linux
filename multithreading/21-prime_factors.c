@@ -3,6 +3,12 @@
 #include "multithreading.h"
 #include "list.h"
 
+/**
+ * parse_number - Convert a string of digits to an unsigned long.
+ * @s: String representation of the number.
+ *
+ * Return: The parsed unsigned long value.
+ */
 static unsigned long parse_number(char const *s)
 {
 	unsigned long number;
