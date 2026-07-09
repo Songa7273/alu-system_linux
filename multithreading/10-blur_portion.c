@@ -8,6 +8,7 @@ static pixel_t blur_pixel(img_t const *img, kernel_t const *kernel, size_t x,
 	size_t half;
 	size_t i;
 	size_t j;
+	float kernel_sum;
 	float red;
 	float green;
 	float blue;
@@ -17,6 +18,7 @@ static pixel_t blur_pixel(img_t const *img, kernel_t const *kernel, size_t x,
 	pixel_t pixel;
 
 	half = kernel->size / 2;
+	kernel_sum = 0.0f;
 	red = 0.0f;
 	green = 0.0f;
 	blue = 0.0f;
@@ -24,6 +26,7 @@ static pixel_t blur_pixel(img_t const *img, kernel_t const *kernel, size_t x,
 	{
 		for (j = 0; j < kernel->size; j++)
 		{
+			kernel_sum += kernel->matrix[i][j];
 			px = (long)x + (long)j - (long)half;
 			py = (long)y + (long)i - (long)half;
 			if (px < 0 || py < 0 || px >= (long)img->w || py >= (long)img->h)
@@ -33,6 +36,12 @@ static pixel_t blur_pixel(img_t const *img, kernel_t const *kernel, size_t x,
 			green += img->pixels[py * (long)img->w + px].g * weight;
 			blue += img->pixels[py * (long)img->w + px].b * weight;
 		}
+	}
+	if (kernel_sum != 0.0f)
+	{
+		red /= kernel_sum;
+		green /= kernel_sum;
+		blue /= kernel_sum;
 	}
 	if (red < 0.0f)
 		red = 0.0f;
