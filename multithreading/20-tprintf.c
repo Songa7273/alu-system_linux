@@ -8,7 +8,7 @@ static pthread_mutex_t logger_lock;
 /**
  * init_logger_lock - Initialize the logger mutex before program start.
  */
-__attribute__((constructor)) static void init_logger_lock(void)
+static void __attribute__((constructor)) init_logger_lock(void)
 {
 	pthread_mutex_init(&logger_lock, NULL);
 }
@@ -16,7 +16,7 @@ __attribute__((constructor)) static void init_logger_lock(void)
 /**
  * destroy_logger_lock - Destroy the logger mutex when the program exits.
  */
-__attribute__((destructor)) static void destroy_logger_lock(void)
+static void __attribute__((destructor)) destroy_logger_lock(void)
 {
 	pthread_mutex_destroy(&logger_lock);
 }
