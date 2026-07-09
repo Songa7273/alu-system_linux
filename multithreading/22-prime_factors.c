@@ -59,8 +59,10 @@ void *exec_tasks(list_t const *tasks)
 {
 	node_t *node;
 	task_t *task;
+	task_t *selected;
 	void *result;
 	size_t index;
+	size_t selected_index;
 	int found;
 
 	if (tasks == NULL)
@@ -68,6 +70,8 @@ void *exec_tasks(list_t const *tasks)
 	while (1)
 	{
 		found = 0;
+		selected = NULL;
+		selected_index = 0;
 		pthread_mutex_lock(&task_list_lock);
 		for (index = 0, node = tasks->head; node != NULL; node = node->next, index++)
 		{
@@ -76,16 +80,10 @@ void *exec_tasks(list_t const *tasks)
 			if (task->status == PENDING)
 			{
 				task->status = STARTED;
-				pthread_mutex_unlock(&task->lock);
-				pthread_mutex_unlock(&task_list_lock);
-				tprintf("[%02lu] Started\n", (unsigned long)index);
-				result = task->entry(task->param);
-				pthread_mutex_lock(&task->lock);
-				task->result = result;
-				task->status = SUCCESS;
-				pthread_mutex_unlock(&task->lock);
-				tprintf("[%02lu] Success\n", (unsigned long)index);
+				selected = task;
+				selected_index = index;
 				found = 1;
+				pthread_mutex_unlock(&task->lock);
 				break;
 			}
 			pthread_mutex_unlock(&task->lock);
@@ -93,6 +91,14 @@ void *exec_tasks(list_t const *tasks)
 		pthread_mutex_unlock(&task_list_lock);
 		if (found == 0)
 			break;
+		tprintf("[%02lu] Started\n", (unsigned long)selected_index);
+		result = selected->entry(selected->param);
+		pthread_mutex_lock(&selected->lock);
+		selected->result = result;
+		selected->status = (result == NULL) ? FAILURE : SUCCESS;
+		pthread_mutex_unlock(&selected->lock);
+		tprintf("[%02lu] %s\n", (unsigned long)selected_index,
+			selected->status == SUCCESS ? "Success" : "Failure");
 	}
 	return (NULL);
 }
