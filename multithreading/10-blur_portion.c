@@ -55,9 +55,9 @@ static pixel_t blur_pixel(img_t const *img, kernel_t const *kernel, size_t x,
 		green = 255.0f;
 	if (blue > 255.0f)
 		blue = 255.0f;
-	pixel.r = (uint8_t)red;
-	pixel.g = (uint8_t)green;
-	pixel.b = (uint8_t)blue;
+	pixel.r = (uint8_t)(red + 0.5f);
+	pixel.g = (uint8_t)(green + 0.5f);
+	pixel.b = (uint8_t)(blue + 0.5f);
 	return (pixel);
 }
 
